@@ -23,13 +23,6 @@ describe("Test draw-mode menu", () => {
             })
         );
         expect(container.firstChild).toMatchSnapshot();
-        //expect(obj.plottable[2]).toBeLessThan(10);
-        if (obj.plottable[2] > 1) {
-            core.warning(
-                "DrawModeSelector Component in '/components/DeckGLMap/components/settings/' seems to have performance issues"
-            );
-            core.setOutput("annotation_status", "annotation_present");
-        }
     });
     it("select option to dispatch redux action", async () => {
         render(
