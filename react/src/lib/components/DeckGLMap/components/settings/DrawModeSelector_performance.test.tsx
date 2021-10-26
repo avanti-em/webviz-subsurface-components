@@ -22,7 +22,7 @@ describe("Test draw-mode menu", () => {
             })
         );
         //expect(obj.plottable[2]).toBeLessThan(10);
-        if (obj.plottable[2] > 1) {
+        if (obj.plottable[2] > 1.5) {
             core.warning(
                 "DrawModeSelector Component in '/components/DeckGLMap/components/settings/' seems to have performance issues. Actual render time:" +
                     obj.plottable[2] +
