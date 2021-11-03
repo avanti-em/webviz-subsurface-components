@@ -1,7 +1,7 @@
 import { JSONConfiguration, JSONConverter } from "@deck.gl/json";
 import DeckGL from "@deck.gl/react";
 import { AnyAction, EnhancedStore } from "@reduxjs/toolkit";
-import { PickInfo } from "deck.gl";
+import { PickInfo, Layer } from "deck.gl";
 import { Operation } from "fast-json-patch";
 import { Feature } from "geojson";
 import React from "react";
@@ -10,15 +10,24 @@ import Settings from "./settings/Settings";
 import JSON_CONVERTER_CONFIG from "../utils/configuration";
 import { setSpec } from "../redux/actions";
 import { createStore } from "../redux/store";
-import { WellsPickInfo } from "../layers/wells/wellsLayer";
+import {
+    WellsPickInfo,
+    getLogInfo,
+    getLogValues,
+    LogCurveDataType,
+} from "../layers/wells/wellsLayer";
 import InfoCard from "./InfoCard";
 import DistanceScale from "../components/DistanceScale";
+import DiscreteColorLegend from "../components/DiscreteLegend";
+import ContinuousLegend from "../components/ContinuousLegend";
+import StatusIndicator from "./StatusIndicator";
 import {
     ColormapLayer,
     Hillshading2DLayer,
     WellsLayer,
     FaultPolygonsLayer,
     PieChartLayer,
+    GridLayer,
     DrawingLayer,
 } from "../layers";
 
@@ -41,6 +50,8 @@ function getSpecWithDefaultProps(
             default_props = FaultPolygonsLayer.defaultProps;
         else if (layer["@@type"] === PieChartLayer.name)
             default_props = PieChartLayer.defaultProps;
+        else if (layer["@@type"] === GridLayer.name)
+            default_props = GridLayer.defaultProps;
         else if (layer["@@type"] === DrawingLayer.name)
             default_props = DrawingLayer.defaultProps;
 
@@ -56,6 +67,44 @@ function getSpecWithDefaultProps(
 
     modified_spec["layers"] = layers;
     return modified_spec;
+}
+
+// construct views object for DeckGL component
+function getViewsForDeckGL() {
+    const deckgl_views = [
+        {
+            "@@type": "OrthographicView",
+            id: "main",
+            controller: {
+                doubleClickZoom: false,
+            },
+            x: "0%",
+            y: "0%",
+            width: "100%",
+            height: "100%",
+            flipY: false,
+        },
+    ];
+    return deckgl_views;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getToolTip(info: PickInfo<any> | WellsPickInfo): string | null {
+    if ((info as WellsPickInfo)?.logName) {
+        return (info as WellsPickInfo)?.logName;
+    } else {
+        const feat = info.object as Feature;
+        return feat?.properties?.["name"];
+    }
+}
+
+function getLayer(deckGlProps: Record<string, unknown>, id: string) {
+    const layers = deckGlProps["layers"] as Layer<unknown>[];
+    if (null == layers) return;
+    const wellsLayers = (layers as WellsLayer[]).filter(
+        (item) => item.id.toLowerCase() == id.toLowerCase()
+    );
+    return wellsLayers[0];
 }
 
 export interface MapProps {
@@ -108,6 +157,11 @@ export interface MapProps {
 
     coordinateUnit: string;
 
+    legend: {
+        visible: boolean;
+        position: number[];
+    };
+
     children?: React.ReactNode;
 }
 
@@ -119,10 +173,21 @@ const Map: React.FC<MapProps> = ({
     coords,
     scale,
     coordinateUnit,
+    legend,
     children,
 }: MapProps) => {
+    // state for views prop of DeckGL component
+    const [deckGLViews, setDeckGLViews] = React.useState([]);
+    React.useEffect(() => {
+        const deckgl_views = getViewsForDeckGL();
+        const configuration = new JSONConfiguration(JSON_CONVERTER_CONFIG);
+        const jsonConverter = new JSONConverter({ configuration });
+        setDeckGLViews(jsonConverter.convert(deckgl_views));
+    }, []);
+
+    // state to update deckglSpec to include layer's defualt props
     const [deckglSpecWithDefaultProps, setDeckglSpecWithDefaultProps] =
-        React.useState(deckglSpec);
+        React.useState(getSpecWithDefaultProps(deckglSpec));
     React.useEffect(() => {
         setDeckglSpecWithDefaultProps(getSpecWithDefaultProps(deckglSpec));
     }, [deckglSpec]);
@@ -136,7 +201,7 @@ const Map: React.FC<MapProps> = ({
         store.current = createStore(deckglSpecWithDefaultProps, setSpecPatch);
     }, [setSpecPatch]);
 
-    const [specObj, setSpecObj] = React.useState(null);
+    const [specObj, setSpecObj] = React.useState<Record<string, unknown>>({});
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [viewState, setViewState] = React.useState<any>();
@@ -205,30 +270,83 @@ const Map: React.FC<MapProps> = ({
         [coords]
     );
 
+    const [isLoaded, setIsLoaded] = React.useState<boolean>(false);
+
+    const [legendProps, setLegendProps] = React.useState<{
+        title: string;
+        discrete: boolean;
+        metadata: { objects: Record<string, [number[], number]> };
+        valueRange: number[];
+    }>({
+        title: "",
+        discrete: false,
+        metadata: { objects: {} },
+        valueRange: [],
+    });
+
+    const onAfterRender = React.useCallback(() => {
+        const layers = specObj["layers"] as Layer<unknown>[];
+        const state = layers.every((layer) => layer.isLoaded);
+        setIsLoaded(state);
+    }, [specObj]);
+
+    const wellsLayer = getLayer(specObj, "wells-layer");
+
+    // Get color table for log curves.
+    React.useEffect(() => {
+        if (!wellsLayer?.isLoaded) return;
+        const logName = wellsLayer.props.logName;
+        const pathLayer = wellsLayer.internalState.subLayers[1];
+        if (!pathLayer.isLoaded) return;
+        const logs = pathLayer?.props.data;
+        const logData = logs[0];
+        const logInfo = getLogInfo(logData, logData.header.name, logName);
+        const title = "Wells / " + logName;
+        if (logInfo?.description == "discrete") {
+            const meta = logData["metadata_discrete"];
+            const metadataDiscrete = meta[logName].objects;
+            setLegendProps({
+                title: title,
+                discrete: true,
+                metadata: metadataDiscrete,
+                valueRange: [],
+            });
+        } else {
+            const minArray: number[] = [];
+            const maxArray: number[] = [];
+            logs.forEach(function (log: LogCurveDataType) {
+                const logValues = getLogValues(log, log.header.name, logName);
+
+                minArray.push(Math.min(...logValues));
+                maxArray.push(Math.max(...logValues));
+            });
+
+            setLegendProps({
+                title: title,
+                discrete: false,
+                metadata: { objects: {} },
+                valueRange: [Math.min(...minArray), Math.max(...maxArray)],
+            });
+        }
+    }, [isLoaded, legend, wellsLayer?.props?.logName]);
+
     return (
         specObj && (
             <ReduxProvider store={store.current}>
                 <DeckGL
                     id={id}
                     {...specObj}
+                    views={deckGLViews}
                     getCursor={({ isDragging }): string =>
                         isDragging ? "grabbing" : "default"
                     }
-                    getTooltip={(
-                        info: PickInfo<unknown> | WellsPickInfo
-                    ): string | null | undefined => {
-                        if ((info as WellsPickInfo)?.logName) {
-                            return (info as WellsPickInfo)?.logName;
-                        } else {
-                            const feat = info.object as Feature;
-                            return feat?.properties?.["name"];
-                        }
-                    }}
+                    getTooltip={getToolTip}
                     ref={refCb}
                     onHover={onHover}
                     onViewStateChange={({ viewState }) =>
                         setViewState(viewState)
                     }
+                    onAfterRender={onAfterRender}
                 >
                     {children}
                 </DeckGL>
@@ -243,6 +361,29 @@ const Map: React.FC<MapProps> = ({
                         scaleUnit={coordinateUnit}
                     />
                 ) : null}
+                {legend.visible && legendProps.discrete && (
+                    <DiscreteColorLegend
+                        discreteData={legendProps.metadata}
+                        dataObjectName={legendProps.title}
+                        position={legend.position}
+                    />
+                )}
+                {legendProps.valueRange?.length > 0 &&
+                    legend.visible &&
+                    legendProps && (
+                        <ContinuousLegend
+                            min={legendProps.valueRange[0]}
+                            max={legendProps.valueRange[1]}
+                            dataObjectName={legendProps.title}
+                            position={legend.position}
+                        />
+                    )}
+                {
+                    <StatusIndicator
+                        layers={specObj["layers"] as Layer<unknown>[]}
+                        isLoaded={isLoaded}
+                    />
+                }
             </ReduxProvider>
         )
     );
