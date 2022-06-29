@@ -135,7 +135,7 @@ jobs:
       # upload the failure screenshots for reference
       - name: upload artfacts
         uses: actions/upload-artifact@v2
-        if: github.event_name != 'release' && matrix.e2e-on-firefox
+        if: github.event_name != 'release' && failure() && matrix.e2e-on-firefox
         with:
           name: cypress-screenshots
           path: |
@@ -145,7 +145,7 @@ jobs:
 
       - name: check if the tests failed due to difference in snapshots
         id: check_file_changed
-        if: github.event_name != 'release' && matrix.e2e-on-firefox
+        if: github.event_name != 'release' && matrix.e2e-on-firefox && failure()
         run: |
           if [[ -d react/cypress/snapshots/diff ]]
           then
@@ -155,7 +155,7 @@ jobs:
           fi
 
       - name: replace newly captured snapshots
-        if: steps.check_file_changed.outputs.docs_changed == 'true'
+        if: steps.check_file_changed.outputs.docs_changed == 'true' && failure()
         run: |
           chmod +x ./cypress.sh
           ./cypress.sh
@@ -167,7 +167,7 @@ jobs:
       - name: Create Pull Request
         id: cpr
         uses: peter-evans/create-pull-request@5a6b15373e5788c38d83296b674ad5abea28085c
-        if: steps.check_file_changed.outputs.docs_changed == 'true'
+        if: steps.check_file_changed.outputs.docs_changed == 'true' && failure()
         with:
           commit-message: updated cypress snapshots
           title: Cypress - New Snapshots for PR number ${{ github.event.number }} by ${{ github.actor }}
