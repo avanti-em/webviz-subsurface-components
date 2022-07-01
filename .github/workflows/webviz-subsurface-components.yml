@@ -157,12 +157,12 @@ jobs:
       - name: replace newly captured snapshots
         if: steps.check_file_changed.outputs.docs_changed == 'true' && failure()
         run: |
-          chmod +x ./cypress.sh
-          ./cypress.sh
+          chmod +x ./cypress.sh || true
+          ./cypress.sh || true
           rm -rf react/cypress/snapshots/actual
           rm -rf react/cypress/snapshots/diff
-          rm files.txt
-          rm files2.txt
+          rm -rf files.txt
+          rm -rf files2.txt
 
       - name: Create Pull Request
         id: cpr
