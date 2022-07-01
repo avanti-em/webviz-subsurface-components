@@ -98,6 +98,6 @@ describe("Map component", () => {
         cy.getIframeBody().find('[id="Drawing-switch"]').click({ force: true });
         cy.getIframeBody()
             .find('[id="drawing-layer-button"]')
-            .should("exist");
+            .should("not.exist");
     });
 });
