@@ -1,10 +1,6 @@
-import { CompositeLayer } from "@deck.gl/core";
-import privateMapLayer, {
-    privateMapLayerProps,
-    Material,
-} from "./privateMapLayer";
+import { CompositeLayer, Color } from "@deck.gl/core/typed";
+import privateMapLayer, { Material } from "./privateMapLayer";
 import { ExtendedLayerProps, colorMapFunctionType } from "../utils/layerTools";
-import { RGBColor } from "@deck.gl/core/utils/color";
 import { layersDefaultProps } from "../layersDefaultProps";
 import { getModelMatrix } from "../utils/layerTools";
 import { isEqual } from "lodash";
@@ -38,9 +34,9 @@ export type Params = {
     propertiesData: Float32Array;
     isMesh: boolean;
     frame: Frame;
-    colors: RGBColor[];
+    colors: Color[];
     colorMapRange: [number, number];
-    colorMapClampColor: RGBColor | undefined | boolean;
+    colorMapClampColor: Color | undefined | boolean;
 };
 
 function getColorMapColors(
@@ -51,7 +47,7 @@ function getColorMapColors(
     const isColorMapFunctionDefined = typeof colorMapFunction !== "undefined";
     const isColorMapNameDefined = !!colorMapName;
 
-    const colors: RGBColor[] = [];
+    const colors: Color[] = [];
 
     const defaultColorMap = createDefaultContinuousColorScale;
 
@@ -64,7 +60,7 @@ function getColorMapColors(
     for (let i = 0; i < 256; i++) {
         const value = i / 255.0;
         const color = colorMap ? colorMap(value) : [0, 0, 0];
-        colors.push(color as RGBColor);
+        colors.push(color as Color);
     }
 
     return colors;
@@ -224,7 +220,7 @@ export interface MapLayerProps<D> extends ExtendedLayerProps<D> {
     // Given as array of three values (r,g,b) e.g: [255, 0, 0]
     // If not set or set to true, it will clamp to color map min and max values.
     // If set to false the clamp color will be completely transparent.
-    colorMapClampColor: RGBColor | undefined | boolean;
+    colorMapClampColor: Color | undefined | boolean;
 
     // Optional function property.
     // If defined this function will override the color map.
@@ -244,11 +240,8 @@ export interface MapLayerProps<D> extends ExtendedLayerProps<D> {
     material: Material;
 }
 
-export default class MapLayer extends CompositeLayer<
-    unknown,
-    MapLayerProps<unknown>
-> {
-    initializeState(): void {
+export default class MapLayer extends CompositeLayer<MapLayerProps<unknown>> {
+    rebuildData(reportBoundingBox: boolean): void {
         const p = load_mesh_and_properties(
             this.props.meshUrl,
             this.props.propertiesUrl
@@ -263,11 +256,14 @@ export default class MapLayer extends CompositeLayer<
             );
             const url = URL.createObjectURL(blob);
             const webWorker = new Worker(url);
+            function webWorkerTerminate() {
+                webWorker.terminate();
+            }
 
             const colorTables = (this.context as DeckGLLayerContext).userData
                 .colorTables;
 
-            const colors: RGBColor[] = getColorMapColors(
+            const colors: Color[] = getColorMapColors(
                 this.props.colorMapName,
                 colorTables,
                 this.props.colorMapFunction
@@ -291,7 +287,10 @@ export default class MapLayer extends CompositeLayer<
                     mesh_lines,
                 });
 
-                if (typeof this.props.setReportedBoundingBox !== "undefined") {
+                if (
+                    typeof this.props.setReportedBoundingBox !== "undefined" &&
+                    reportBoundingBox
+                ) {
                     const xinc = this.props.frame?.increment?.[0] ?? 0;
                     const yinc = this.props.frame?.increment?.[1] ?? 0;
 
@@ -314,8 +313,15 @@ export default class MapLayer extends CompositeLayer<
                         zMax,
                     ]);
                 }
+
+                webWorkerTerminate();
             };
         });
+    }
+
+    initializeState(): void {
+        const reportBoundingBox = true;
+        this.rebuildData(reportBoundingBox);
     }
 
     updateState({
@@ -325,9 +331,20 @@ export default class MapLayer extends CompositeLayer<
         props: MapLayerProps<unknown>;
         oldProps: MapLayerProps<unknown>;
     }): void {
-        const needs_reload = !isEqual(props, oldProps);
+        const needs_reload =
+            !isEqual(props.meshUrl, oldProps.meshUrl) ||
+            !isEqual(props.propertiesUrl, oldProps.propertiesUrl) ||
+            !isEqual(props.frame, oldProps.frame) ||
+            !isEqual(props.gridLines, oldProps.gridLines) ||
+            !isEqual(props.colorMapName, oldProps.colorMapName) ||
+            !isEqual(props.colorMapRange, oldProps.colorMapRange) ||
+            !isEqual(props.colorMapClampColor, oldProps.colorMapClampColor) ||
+            !isEqual(props.colorMapFunction, oldProps.colorMapFunction) ||
+            !isEqual(props.material, oldProps.material);
+
         if (needs_reload) {
-            this.initializeState();
+            const reportBoundingBox = false;
+            this.rebuildData(reportBoundingBox);
         }
     }
 
@@ -349,9 +366,9 @@ export default class MapLayer extends CompositeLayer<
             this.props.meshUrl !== "";
 
         const layer = new privateMapLayer(
-            this.getSubLayerProps<unknown, privateMapLayerProps<unknown>>({
-                mesh: this.state.mesh,
-                meshLines: this.state.mesh_lines,
+            this.getSubLayerProps({
+                mesh: this.state["mesh"],
+                meshLines: this.state["mesh_lines"],
                 pickable: this.props.pickable,
                 modelMatrix: rotatingModelMatrix,
                 contours: this.props.contours,
