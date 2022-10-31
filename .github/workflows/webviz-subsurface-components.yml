@@ -212,6 +212,7 @@ jobs:
             git config --local user.name "webviz-github-action"
             git checkout -b update_snaps
             git commit -am "updating snapshots"
+            git pull
             git push -u origin update_snaps
             gh pr create --reviewer ${{ github.actor }} --title 'Cypress - New Snapshots for PR number ${{ github.event.number }} by ${{ github.actor }}' --body 'Created by Github action'
           fi
