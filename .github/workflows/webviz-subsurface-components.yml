@@ -194,25 +194,31 @@ jobs:
             git push "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages
           fi
 
-      - name: create automated pull request
+      - name: prepare for automated pull request
         id: check_file_changed
         if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || contains(github.event.head_commit.message, '[deploy test]')) && matrix.python-version == '3.10' && failure()
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ -d "react/cypress-visual-screenshots/diff" ]
           then
+            echo "true" >> $GITHUB_OUTPUT
             cd react
             npx cypress-image-diff -u
             rm -rf cypress-visual-screenshots/comparison
             rm -rf cypress-visual-screenshots/diff
             rm -rf cypress/screenshots
             rm -rf cypress/videos
-            git config --local user.email "webviz-github-action"
-            git config --local user.name "webviz-github-action"
-            git checkout -b update_snaps
-            git commit -am "updating snapshots"
-            git push -u origin update_snaps
-            gh pr create --reviewer ${{ github.actor }} --title 'Cypress - New Snapshots for PR number ${{ github.event.number }} by ${{ github.actor }}' --body 'Created by Github action'
-            git push origin --delete update_snaps
+          else
+            echo "false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Create Pull Request
+        id: cpr
+        uses: peter-evans/create-pull-request@5a6b15373e5788c38d83296b674ad5abea28085c
+        if: steps.check_file_changed.outputs == "true" && github.event_name == 'push' && (github.ref == 'refs/heads/master' || contains(github.event.head_commit.message, '[deploy test]')) && matrix.python-version == '3.10' && failure()
+        with:
+          commit-message: updated cypress snapshots
+          title: Cypress - New Snapshots for PR number ${{ github.event.number }} by ${{ github.actor }}
+          body: This is an auto-generated PR to update cypress snapshots.
+          base: ${{ github.head_ref }}
+          reviewers: ${{ github.actor }}
+          delete-branch: true  
