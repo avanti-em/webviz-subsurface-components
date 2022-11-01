@@ -212,11 +212,7 @@ jobs:
             git config --local user.name "webviz-github-action"
             git checkout -b update_snaps
             git commit -am "updating snapshots"
-            git ls-remote --exit-code --heads origin update_snaps
-            EXIT_CODE=$?
-            if [[ $EXIT_CODE == '0' ]]; then
-              git pull origin update_snaps
-            fi
             git push -u origin update_snaps
             gh pr create --reviewer ${{ github.actor }} --title 'Cypress - New Snapshots for PR number ${{ github.event.number }} by ${{ github.actor }}' --body 'Created by Github action'
+            git push origin --delete update_snaps
           fi
