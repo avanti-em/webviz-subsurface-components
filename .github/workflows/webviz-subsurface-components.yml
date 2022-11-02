@@ -220,5 +220,5 @@ jobs:
           title: Cypress - New Snapshots generated for the commit ${{ github.event.commits[0].id }} by ${{ github.event.commits[0].author.email }}
           body: This is an auto-generated PR to update cypress snapshots.
           base: ${{ github.head_ref }}
-          reviewers: ${{ github.actor }}
+          reviewers: ${{ github.event.actor.login }}
           delete-branch: true  
