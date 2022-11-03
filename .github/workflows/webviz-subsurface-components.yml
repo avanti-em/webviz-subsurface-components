@@ -217,8 +217,8 @@ jobs:
         if: steps.check_file_changed.outputs.status == 'true' && github.event_name == 'push' && (github.ref == 'refs/heads/master' || contains(github.event.head_commit.message, '[deploy test]')) && matrix.python-version == '3.10' && failure()
         with:
           commit-message: updated cypress snapshots
-          title: Cypress - New Snapshots generated for the commit ${{ github.event.commits[0].id }} by ${{ github.event.commits[0].author.email }}
+          title: Cypress - New Snapshots generated for the commit "${{ github.event.head_commit.message }}" by ${{ github.event.commits[0].author.email }} by usr 1 ${{ github.event.sender.login }} by usr 2 ${{ github.sender.login }}
           body: This is an auto-generated PR to update cypress snapshots.
           base: ${{ github.head_ref }}
-          reviewers: ${{ github.event.commits[0].author.email }}
+          reviewers: ${{ github.event.sender.login }}
           delete-branch: true  
