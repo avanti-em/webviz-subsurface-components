@@ -127,8 +127,7 @@ jobs:
           cd react
           mkdir clone_repo
           git clone --branch cypress-snaps https://github.com/avanti-em/webviz-subsurface-components.git
-          cd clone_repo
-          cd react
+          cd clone_repo/webviz-subsurface-components/react
           git filter-branch --subdirectory-filter cypress-visual-screenshots -- --all
           git reset --hard
           git gc --aggressive 
