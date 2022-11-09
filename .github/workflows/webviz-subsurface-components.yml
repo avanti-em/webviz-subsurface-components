@@ -126,7 +126,7 @@ jobs:
         run: |
           cd react
           mkdir clone_repo
-          git clone --branch cypress-snaps --origin origin --progress \  -v https://github.com/avanti-em/webviz-subsurface-components.git
+          git clone --branch cypress-snaps --origin origin --progress \ -v https://github.com/avanti-em/webviz-subsurface-components.git
           cd clone_repo
           cd react
           git filter-branch --subdirectory-filter cypress-visual-screenshots -- --all
