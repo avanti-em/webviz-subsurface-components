@@ -125,11 +125,21 @@ jobs:
         if: github.event_name != 'release' && matrix.e2e-tests
         run: |
           cd react
-          git checkout cypress-snaps -- cypress-visual-screenshots
+          mkdir clone_repo
+          git clone -b cypress-snaps git@github.com:avanti-em/webviz-subsurface-components.git
+          cd clone_repo
+          cd react
+          git filter-branch --subdirectory-filter cypress-visual-screenshots -- --all
+          git reset --hard
+          git gc --aggressive 
+          git prune
+          git clean -fd
+          mkdir cypress-visual-screenshots
+          mv * cypress-visual-screenshots
           npx cypress run -b chrome --component --headed
 
       # upload the failure screenshots for reference
-      - name: upload artfacts
+      - name: upload artifacts
         uses: actions/upload-artifact@v2
         if: github.event_name != 'release' && failure() && matrix.e2e-tests
         with:
