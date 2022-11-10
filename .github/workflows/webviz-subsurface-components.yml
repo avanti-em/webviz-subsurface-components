@@ -131,7 +131,9 @@ jobs:
           git sparse-checkout set react/cypress-visual-screenshots
           cd react
           mv * ../../../react/
-          cd ../../../react
+          cd ../../../
+          rm -rf clone
+          cd react
           npx cypress run -b chrome --component --headed
 
       # upload the failure screenshots for reference
