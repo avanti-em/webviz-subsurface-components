@@ -38,6 +38,7 @@ import {
 } from "../../../inputSchema/schemaValidationUtil";
 import { LayerPickInfo } from "../layers/utils/layerTools";
 import { getLayersByType } from "../layers/utils/layerTools";
+import { getWellLayerByTypeAndSelectedWells } from "../layers/utils/layerTools";
 import { WellsLayer } from "../layers";
 
 import { isEmpty, isEqual } from "lodash";
@@ -475,7 +476,10 @@ const Map: React.FC<MapProps> = ({
     useEffect(() => {
         // If "bounds" or "cameraPosition" is not defined "viewState" will be
         // calculated based on the union of the reported bounding boxes from each layer.
-        if (!didUserChangeCamera && !cameraPosition) {
+        const isCameraPositionDefined =
+            typeof cameraPosition !== "undefined" &&
+            Object.keys(cameraPosition).length !== 0;
+        if (!didUserChangeCamera && !isCameraPositionDefined) {
             calcDefaultViewStates();
         }
     }, [reportedBoundingBox]);
@@ -613,16 +617,50 @@ const Map: React.FC<MapProps> = ({
         }
     }, [selection]);
 
+    useEffect(() => {
+        const layers = deckRef.current?.deck?.props.layers;
+        if (layers) {
+            const wellslayer = getLayersByType(
+                layers,
+                "WellsLayer"
+            )?.[0] as WellsLayer;
+
+            wellslayer?.setSelection(selection?.well, selection?.selection);
+        }
+    }, [selection]);
+
     // multiple well layers
     const [multipleWells, setMultipleWells] = useState<string[]>([]);
+    const [selectedWell, setSelectedWell] = useState<string>("");
 
+    useEffect(() => {
+        const layers = deckRef.current?.deck?.props.layers;
+        if (layers) {
+            const wellslayer = getWellLayerByTypeAndSelectedWells(
+                layers,
+                "WellsLayer",
+                selectedWell
+            )?.[0] as WellsLayer;
+            wellslayer?.setMultiSelection(multipleWells);
+        }
+    }, [multipleWells]);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [hoverInfo, setHoverInfo] = useState<any>([]);
     const onHover = useCallback(
         (pickInfo, event) => {
             const infos = getPickingInfos(pickInfo, event);
-            setHoverInfo(infos); //  for InfoCard pickInfos
-            callOnMouseEvent?.("hover", infos, event);
+
+            // preventing deep picking of Grid3DLayer
+            const filtered_infos = infos.filter((info, index) => {
+                const idx = infos.findIndex(
+                    (object) =>
+                        object.layer?.constructor.name === "Grid3DLayer" &&
+                        object.layer?.id === info.layer?.id
+                );
+                return index === idx;
+            });
+            setHoverInfo(filtered_infos); // for InfoCard pickInfos
+            callOnMouseEvent("hover", infos, event);
         },
         [coords, onMouseEvent]
     );
@@ -854,6 +892,7 @@ const Map: React.FC<MapProps> = ({
                 // @ts-expect-error this prop doesn't exists directly on DeckGL, but on Deck.Context
                 userData={{
                     setEditedData: (updated_prop: Record<string, unknown>) => {
+                        setSelectedWell(updated_prop["selectedWell"] as string);
                         if (
                             Object.keys(updated_prop).includes("selectedWell")
                         ) {
