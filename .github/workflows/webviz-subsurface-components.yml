@@ -125,16 +125,10 @@ jobs:
         if: github.event_name != 'release' && matrix.e2e-tests
         run: |
           cd react
-          mkdir clone_repo
-          git clone --branch cypress-snaps https://github.com/avanti-em/webviz-subsurface-components.git
-          cd clone_repo/webviz-subsurface-components/react
-          git filter-branch --subdirectory-filter cypress-visual-screenshots -- --all
-          git reset --hard
-          git gc --aggressive 
-          git prune
-          git clean -fd
           mkdir cypress-visual-screenshots
-          mv * cypress-visual-screenshots
+          cd cypress-visual-screenshots
+          git clone --branch cypress-snaps --filter=blob:none --sparse https://github.com/avanti-em/webviz-subsurface-components.git
+          git sparse-checkout add webviz-subsurface-components/react/cypress-visual-screenshots/baseline
           npx cypress run -b chrome --component --headed
 
       # upload the failure screenshots for reference
