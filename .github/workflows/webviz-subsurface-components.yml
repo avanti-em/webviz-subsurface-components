@@ -124,11 +124,14 @@ jobs:
       - name: e2e on firefox
         if: github.event_name != 'release' && matrix.e2e-tests
         run: |
+          mkdir clone
+          cd clone
+          git clone --branch cypress-snaps --depth 1 --filter=blob:none https://github.com/avanti-em/webviz-subsurface-components
+          cd webviz-subsurface-components
+          git sparse-checkout set react/cypress-visual-screenshots
           cd react
-          mkdir cypress-visual-screenshots
-          cd cypress-visual-screenshots
-          git clone --branch cypress-snaps --filter=blob:none --sparse https://github.com/avanti-em/webviz-subsurface-components.git
-          git sparse-checkout add webviz-subsurface-components/react/cypress-visual-screenshots/baseline
+          mv * ../../../react/
+          cd ../../../react
           npx cypress run -b chrome --component --headed
 
       # upload the failure screenshots for reference
