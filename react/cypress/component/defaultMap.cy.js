@@ -14,7 +14,7 @@ describe("Map Story Tests", () => {
   before("activate hooks",() => {
     mount(<Default />)
     cy.get("svg[role='progressbar']")
-    cy.get("svg[role='progressbar']", {timeout: 30000}).should("not.exist")
+    cy.wait(3000)
     unmount()
   })
   it("should diplay default story",() => {
