@@ -12,14 +12,14 @@ render(<Default />).unmount();
 
 describe("Map Story Tests", () => {
   before("activate hooks",() => {
-    mount(<Default />)
-    cy.get("svg[role='progressbar']")
     Cypress.on('fail', (error, runnable) => {
-      cy.get("svg[role='progressbar']", {timeout: 30000}).should("not.exist")
       if (!error.message.includes('not to exist in the DOM, but it was continuously found')) {
       throw error
       }
     })
+    mount(<Default />)
+    cy.get("svg[role='progressbar']")
+    cy.get("svg[role='progressbar']", {timeout: 30000}).should("not.exist")
     unmount()
   })
   it("should diplay default story",() => {
