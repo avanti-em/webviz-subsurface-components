@@ -8,13 +8,18 @@ import * as stories from "../../src/lib/components/DeckGLMap/storybook/DeckGLMap
 
 const { Default } = composeStories(stories);
 
-//render(<Default />).unmount();
+render(<Default />).unmount();
 
 describe("Map Story Tests", () => {
   before("activate hooks",() => {
     mount(<Default />)
     cy.get("svg[role='progressbar']")
-    cy.wait(3000)
+    Cypress.on('fail', (error, runnable) => {
+      cy.get("svg[role='progressbar']", {timeout: 30000}).should("not.exist")
+      if (!error.message.includes('not to exist in the DOM, but it was continuously found')) {
+      throw error
+      }
+    })
     unmount()
   })
   it("should diplay default story",() => {

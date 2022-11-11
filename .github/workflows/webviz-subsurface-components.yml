@@ -144,7 +144,6 @@ jobs:
           name: cypress-screenshots
           path: |
             react/cypress/screenshots
-            react/cypress/videos
             react/cypress-visual-screenshots
           retention-days: 5
 
