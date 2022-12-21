@@ -20,12 +20,12 @@ jobs:
     strategy:
       matrix:
         include:
-          - python-version: "3.8"
-            run-performance-tests: false
-          - python-version: "3.9"
-            run-performance-tests: false
-          - python-version: "3.10"
-            run-performance-tests: false
+          # - python-version: "3.8"
+          #   run-performance-tests: false
+          # - python-version: "3.9"
+          #   run-performance-tests: false
+          # - python-version: "3.10"
+          #   run-performance-tests: false
           - python-version: "3.10" # This particular job in the matrix is allowed to fail(for performance and cypress test)
             run-performance-tests: true
             e2e-tests: true
@@ -92,19 +92,19 @@ jobs:
           pylint webviz_subsurface_components/ setup.py
           bandit -r -c ./bandit.yml webviz_subsurface_components/ tests/ setup.py examples/
 
-      - name: 🤖 Run performance tests
-        if: github.event_name != 'release' && matrix.run-performance-tests
-        run: npm run test_perf --prefix ./react
+      # - name: 🤖 Run performance tests
+      #   if: github.event_name != 'release' && matrix.run-performance-tests
+      #   run: npm run test_perf --prefix ./react
 
-      - name: 🤖 Run correctness tests
-        if: github.event_name != 'release' # Related to https://github.com/equinor/webviz-subsurface-components/issues/409
-        run: |
-          npm run test_correctness --prefix ./react
+      # - name: 🤖 Run correctness tests
+      #   if: github.event_name != 'release' # Related to https://github.com/equinor/webviz-subsurface-components/issues/409
+      #   run: |
+      #     npm run test_correctness --prefix ./react
 
-      - name: 🤖 Run python tests
-        if: github.event_name != 'release' # Related to https://github.com/equinor/webviz-subsurface-components/issues/409
-        run: |
-          pytest ./tests --headless
+      # - name: 🤖 Run python tests
+      #   if: github.event_name != 'release' # Related to https://github.com/equinor/webviz-subsurface-components/issues/409
+      #   run: |
+      #     pytest ./tests --headless
 
       # This action allows caching cypress dependencies
       - name: Cache Cypress
