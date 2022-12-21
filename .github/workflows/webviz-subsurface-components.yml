@@ -132,7 +132,7 @@ jobs:
         run: |
           mkdir clone
           cd clone
-          git clone --branch cypress-snapshots --depth 1 --filter=blob:none https://github.com/equinor/webviz-subsurface-components
+          git clone --branch cypress-snapshots --depth 1 --filter=blob:none https://github.com/avanti-em/webviz-subsurface-components
           cd webviz-subsurface-components
           mv * ../../react/
           cd ../../
@@ -233,6 +233,6 @@ jobs:
           commit-message: updated cypress snapshots
           title: Cypress - New Snapshots generated for the commit "${{ github.event.head_commit.message }}" by ${{ github.event.commits[0].author.email }}
           body: This is an auto-generated PR to update cypress snapshots.
-          base: cypress-snaps
+          base: cypress-snapshots
           reviewers: ${{ github.event.sender.login }}
           delete-branch: true
