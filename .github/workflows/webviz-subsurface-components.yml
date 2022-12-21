@@ -133,9 +133,9 @@ jobs:
           mkdir clone
           cd clone
           git clone --branch cypress-snapshots --depth 1 --filter=blob:none https://github.com/avanti-em/webviz-subsurface-components
-          cd webviz-subsurface-components
-          mv * ../../react/
-          cd ../../
+          cd webviz-subsurface-components/react
+          mv * ../../../react/
+          cd ../../../
           rm -rf clone
           cd react
           git add -f cypress-visual-screenshots/**
