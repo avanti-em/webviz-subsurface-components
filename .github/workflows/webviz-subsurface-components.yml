@@ -132,14 +132,13 @@ jobs:
         run: |
           mkdir clone
           cd clone
-          git clone --branch cypress-snapshots --depth 1 --filter=blob:none https://github.com/avanti-em/webviz-subsurface-components
+          git clone --branch cypress-snaps --depth 1 --filter=blob:none https://github.com/equinor/webviz-subsurface-components
           cd webviz-subsurface-components
-          git sparse-checkout set react/cypress-visual-screenshots
-          cd react
-          mv * ../../../react/
-          cd ../../../
+          mv * ../../react/
+          cd ../../
           rm -rf clone
           cd react
+          git add -f cypress-visual-screenshots/**
           npx cypress run -b chrome --component --headed
 
       # upload the failure screenshots for reference
