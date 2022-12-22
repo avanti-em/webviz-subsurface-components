@@ -139,6 +139,7 @@ jobs:
           rm -rf clone
           cd react
           git add -f cypress-visual-screenshots/**
+          git commit -am "override git ignore for cypress"
           npx cypress run -b chrome --component --headed
 
       # upload the failure screenshots for reference
