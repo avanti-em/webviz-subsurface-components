@@ -236,3 +236,4 @@ jobs:
           base: cypress-snapshots
           reviewers: ${{ github.event.sender.login }}
           delete-branch: true
+ 
