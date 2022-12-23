@@ -11,22 +11,22 @@ const { Default } = composeStories(stories);
 render(<Default />).unmount();
 
 describe("Map Story Tests", () => {
-  xit("activate hooks",() => {
+  it("activate hooks",() => {
     render(<Default />)
     cy.wait(5000)
   });
   
   it("should diplay default story",() => {
       mount(<Default />);
-      //cy.get("svg[role='progressbar']")
-      //cy.get("svg[role='progressbar']", {timeout: 60000}).should("not.exist")
+      cy.get("svg[role='progressbar']")
+      cy.get("svg[role='progressbar']", {timeout: 60000}).should("not.exist")
       cy.get("#DeckGL-Map-wrapper").compareSnapshot('default-map-story')
   });
 
   it("should diplay default story with depth test true",() => {
     cy.fixture('example.json').then((exampleData) => {mount(<Default { ...exampleData[0] }/>);})
-    //cy.get("svg[role='progressbar']")
-    //cy.get("svg[role='progressbar']", {timeout: 60000}).should("not.exist")
+    cy.get("svg[role='progressbar']")
+    cy.get("svg[role='progressbar']", {timeout: 60000}).should("not.exist")
     cy.get("#DeckGL-Map-wrapper").compareSnapshot('wells_on_top')
   });
   
